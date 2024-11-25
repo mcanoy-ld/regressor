@@ -9,6 +9,9 @@ import { Slider } from "./components/ui/slider"
 import { Progress } from "./components/ui/progress"
 import { ThemeProvider } from "./components/theme-provider"
 import { GearIcon } from "@radix-ui/react-icons"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "./components/ui/dialog"
+import { Label } from "./components/ui/label"
+import { Input } from "./components/ui/input"
 
 function App() {
   const { flightStatus } = useFlags()
@@ -25,6 +28,11 @@ function App() {
   const [extremeModeLatencyMin, setExtremeModeLatencyMin] = useState(110)
   const [extremeModeLatencyMax, setExtremeModeLatencyMax] = useState(120)
   const [extremeModeErrorRate, setExtremeModeErrorRate] = useState(95)
+  const [clientSideId, setClientSideId] = useState(() => localStorage.getItem('userIdPrefix') || 'user')
+  const [latencyMetricKey, setLatencyMetricKey] = useState(() => localStorage.getItem('latencyMetricKey') || 'flight-status-latency')
+  const [errorMetricKey, setErrorMetricKey] = useState(() => localStorage.getItem('errorMetricKey') || 'Flight Status Error')
+  const [showSettings, setShowSettings] = useState(false)
+  const [ldClientSideId, setLdClientSideId] = useState(() => localStorage.getItem('clientSideID') || '650e1ecc844ace12c3e99023')
 
   // Show toast when flightStatus is true (Version B)
   useEffect(() => {
@@ -35,9 +43,20 @@ function App() {
     }
   }, [flightStatus])
 
+  // Save clientSideID to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('clientSideID', ldClientSideId)
+    // Show toast to notify user they need to refresh
+    if (ldClientSideId !== localStorage.getItem('clientSideID')) {
+      toast.info('Client Side ID Updated', {
+        description: 'Please refresh the page for changes to take effect'
+      })
+    }
+  }, [ldClientSideId])
+
   // Function to generate random user key
   const generateRandomUser = () => {
-    return `user-${Math.random().toString(36).substring(2, 6)}`
+    return `${clientSideId}-${Math.random().toString(36).substring(2, 6)}`
   }
 
   // Function to simulate latency (110-130ms range, or custom range in extreme mode)
@@ -90,8 +109,8 @@ function App() {
       await delay(artificialLatency)
 
       // Track latency metric for all cases
-      await client.track('flight-status-latency', {
-        key: 'flight-status-latency',
+      await client.track(latencyMetricKey, {
+        key: latencyMetricKey,
         data: {
           variant: flightStatus ? 'B' : 'A',
           timestamp: new Date().toISOString(),
@@ -138,8 +157,8 @@ function App() {
       })
 
       // Track error metric
-      await client.track('Flight Status Error', {
-        key: 'Flight Status Error',
+      await client.track(errorMetricKey, {
+        key: errorMetricKey,
         data: {
           variant: flightStatus ? 'B' : 'A',
           timestamp: new Date().toISOString(),
@@ -209,6 +228,25 @@ function App() {
     throw new Error('Manual test error triggered')
   }
 
+  const handleSaveSettings = () => {
+    // Save all settings
+    localStorage.setItem('clientSideID', ldClientSideId)
+    localStorage.setItem('userIdPrefix', clientSideId)
+    localStorage.setItem('latencyMetricKey', latencyMetricKey)
+    localStorage.setItem('errorMetricKey', errorMetricKey)
+    
+    setShowSettings(false)
+    
+    // Show toast and reload after a brief delay
+    toast.success('Settings saved', {
+      description: 'Reloading page to apply changes...'
+    })
+    
+    setTimeout(() => {
+      window.location.reload()
+    }, 1500)
+  }
+
   return (
     <ThemeProvider defaultTheme="dark" storageKey="ui-theme">
       <div className="min-h-screen bg-background p-4 md:p-6">
@@ -217,13 +255,74 @@ function App() {
           <div>
             <h1 className="text-2xl md:text-3xl font-bold">LaunchDarkly Regression Test Runner</h1>
           </div>
-          <Button
-            variant={isRunning ? "destructive" : "default"}
-            onClick={handleStartStop}
-            className="w-full sm:w-40"
-          >
-            {isRunning ? 'Stop Testing' : 'Start Testing'}
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Dialog open={showSettings} onOpenChange={setShowSettings}>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="w-full sm:w-auto">
+                  <GearIcon className="h-4 w-4 mr-2" />
+                  Settings
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Configuration Settings</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="ldClientId">LaunchDarkly Client ID</Label>
+                    <Input
+                      id="ldClientId"
+                      value={ldClientSideId}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLdClientSideId(e.target.value)}
+                      placeholder="Enter LaunchDarkly Client ID"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="clientId">User ID Prefix</Label>
+                    <Input
+                      id="clientId"
+                      value={clientSideId}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setClientSideId(e.target.value)}
+                      placeholder="Enter client ID prefix"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="latencyKey">Latency Metric Event Key</Label>
+                    <Input
+                      id="latencyKey"
+                      value={latencyMetricKey}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLatencyMetricKey(e.target.value)}
+                      placeholder="Enter latency metric key"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="errorKey">Error Metric Event Key</Label>
+                    <Input
+                      id="errorKey"
+                      value={errorMetricKey}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setErrorMetricKey(e.target.value)}
+                      placeholder="Enter error metric key"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowSettings(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveSettings}>
+                    Save & Reload
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Button
+              variant={isRunning ? "destructive" : "default"}
+              onClick={handleStartStop}
+              className="w-full sm:w-40"
+            >
+              {isRunning ? 'Stop Testing' : 'Start Testing'}
+            </Button>
+          </div>
         </div>
 
        

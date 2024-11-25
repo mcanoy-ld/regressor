@@ -32,9 +32,12 @@ async function init() {
     return <>{children}</>;
   };
 
+  // Get clientSideID from localStorage or use default
+  const storedClientSideID = localStorage.getItem('clientSideID') || '650e1ecc844ace12c3e99023';
+
   const LDProvider = await asyncWithLDProvider({
     // clientSideID: '672ddc5691334a0855311cd6',
-    clientSideID: '650e1ecc844ace12c3e99023',
+    clientSideID: storedClientSideID,
     // clientSideID: "6719dac7e8659a07fb1ef8d7",
     user: {
       key: generateRandomUser(),
