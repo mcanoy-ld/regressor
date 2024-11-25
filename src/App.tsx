@@ -24,7 +24,6 @@ function App() {
   const [totalLatency, setTotalLatency] = useState(0)
   const [extremeMode, setExtremeMode] = useState(false)
   const [testInterval, setTestInterval] = useState(500)
-  const [errorCount, setErrorCount] = useState(0)
   const [extremeModeLatencyMin, setExtremeModeLatencyMin] = useState(110)
   const [extremeModeLatencyMax, setExtremeModeLatencyMax] = useState(120)
   const [extremeModeErrorRate, setExtremeModeErrorRate] = useState(95)
@@ -76,8 +75,6 @@ function App() {
 
   // Function to determine if an error should occur based on version and mode
   const shouldSimulateError = (isFlightStatusTrue: boolean) => {
-    setErrorCount(prev => prev + 1)
-    
     if (extremeMode && isFlightStatusTrue) {
       // In extreme mode with flightStatus true:
       // Return true (error) based on custom error rate
@@ -210,17 +207,8 @@ function App() {
       setErrors(0)
       setTotalLatency(0)
       setAverageLatency(0)
-      setErrorCount(0)
     }
     setIsRunning(!isRunning)
-  }
-
-  // Function to get current error rate text
-  const getErrorRateText = () => {
-    if (extremeMode && flightStatus) {
-      return `${extremeModeErrorRate}% (Version B - flightStatus true - Extreme)`
-    }
-    return '5% (Standard error rate)'
   }
 
   // Function to throw a test error
