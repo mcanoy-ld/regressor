@@ -2,7 +2,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 
 interface TestResultsChartProps {
   trueCount: number;
+  trueErrorCount: number;
   falseCount: number;
+  falseErrorCount: number;
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -22,12 +24,17 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export function TestResultsChart({ trueCount, falseCount }: TestResultsChartProps) {
+export function TestResultsChart({ trueCount, trueErrorCount, falseCount, falseErrorCount }: TestResultsChartProps) {
   const data = [
     {
-      name: 'Flag Evaluations',
-      'True (Version B)': trueCount,
-      'False (Version A)': falseCount,
+      name: 'Serving False - Version A',
+      'Success': falseCount - falseErrorCount,
+      'Failure': falseErrorCount,
+    },
+    {
+      name: 'Serving True - Version B',
+      'Success': trueCount - trueErrorCount,
+      'Failure': trueErrorCount,
     }
   ];
 
@@ -46,8 +53,7 @@ export function TestResultsChart({ trueCount, falseCount }: TestResultsChartProp
           <CartesianGrid 
             strokeDasharray="3 3" 
             stroke="hsl(var(--muted-foreground))" 
-            opacity={0.2}
-          />
+            opacity={0.2} />
           <XAxis 
             dataKey="name" 
             stroke="hsl(var(--muted-foreground))"
@@ -63,16 +69,8 @@ export function TestResultsChart({ trueCount, falseCount }: TestResultsChartProp
               color: "hsl(var(--foreground))"
             }}
           />
-          <Bar 
-            dataKey="True (Version B)" 
-            fill="hsl(var(--primary))" 
-            radius={[4, 4, 0, 0]}
-          />
-          <Bar 
-            dataKey="False (Version A)" 
-            fill="hsl(var(--secondary))" 
-            radius={[4, 4, 0, 0]}
-          />
+          <Bar dataKey="Success" stackId="a" fill="#93c47d" />
+          <Bar dataKey="Failure" stackId="a" fill="#8d1414" />
         </BarChart>
       </ResponsiveContainer>
     </div>
