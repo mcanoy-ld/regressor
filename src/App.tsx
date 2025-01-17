@@ -1,17 +1,17 @@
 import { useFlags, useLDClient } from 'launchdarkly-react-client-sdk'
-import { Button } from "./components/ui/button"
+import { Button } from "./components/ui/button.tsx"
 import { useEffect, useState } from 'react'
 import { Toaster, toast } from 'sonner'
-import { TestResultsChart } from './components/TestResultsChart'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./components/ui/card"
-import { Switch } from "./components/ui/switch"
-import { Slider } from "./components/ui/slider"
-import { Progress } from "./components/ui/progress"
-import { ThemeProvider } from "./components/theme-provider"
+import { TestResultsChart } from './components/TestResultsChart.tsx'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./components/ui/card.tsx"
+import { Switch } from "./components/ui/switch.tsx"
+import { Slider } from "./components/ui/slider.tsx"
+import { Progress } from "./components/ui/progress.tsx"
+import { ThemeProvider } from "./components/theme-provider.tsx"
 import { GearIcon } from "@radix-ui/react-icons"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "./components/ui/dialog"
-import { Label } from "./components/ui/label"
-import { Input } from "./components/ui/input"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "./components/ui/dialog.tsx"
+import { Label } from "./components/ui/label.tsx"
+import { Input } from "./components/ui/input.tsx"
 
 function App() {
   const { flightStatus } = useFlags()
@@ -20,6 +20,8 @@ function App() {
   const [trueCount, setTrueCount] = useState(0)
   const [falseCount, setFalseCount] = useState(0)
   const [errors, setErrors] = useState(0)
+  const [trueErrors, setTrueErrors] = useState(0)
+  const [falseErrors, setFalseErrors] = useState(0)
   const [averageLatency, setAverageLatency] = useState(0)
   const [totalLatency, setTotalLatency] = useState(0)
   const [extremeMode, setExtremeMode] = useState(false)
@@ -104,7 +106,6 @@ function App() {
       
       // Simulate the artificial latency first
       await delay(artificialLatency)
-
       // Track latency metric for all cases
       await client.track(latencyMetricKey, {
         key: latencyMetricKey,
@@ -144,8 +145,11 @@ function App() {
       // Still increment counters even on error
       if (flightStatus) {
         setTrueCount(prev => prev + 1)
+        setTrueErrors(prev => prev + 1)
+
       } else {
         setFalseCount(prev => prev + 1)
+        setFalseErrors(prev => prev + 1)
       }
 
       // Show error toast
@@ -202,13 +206,29 @@ function App() {
 
   const handleStartStop = () => {
     if (!isRunning) {
+      setExtremeMode(false)
+    }
+    startStop();
+  }
+
+  const startStop = () => {
+    if (!isRunning) {
       setTrueCount(0)
       setFalseCount(0)
       setErrors(0)
+      setTrueErrors(0)
+      setFalseErrors(0)
       setTotalLatency(0)
       setAverageLatency(0)
     }
     setIsRunning(!isRunning)
+  }
+
+  const handleExtremeStartStop = () => {
+    if (!isRunning) {
+      setExtremeMode(true)
+    }
+    startStop();
   }
 
   // Function to throw a test error
@@ -310,6 +330,13 @@ function App() {
             >
               {isRunning ? 'Stop Testing' : 'Start Testing'}
             </Button>
+            <Button
+              variant={isRunning ? "destructive" : "default"}
+              onClick={handleExtremeStartStop}
+              className="w-full sm:w-40"
+            >
+              {isRunning ? 'Stop Testing' : 'Start Extreme Testing'}
+            </Button>
           </div>
         </div>
 
@@ -339,7 +366,6 @@ function App() {
                 </div>
               </CardContent>
             </Card>
-
           
             <Card>
               <CardHeader>
@@ -423,7 +449,7 @@ function App() {
               <CardHeader>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
-                    <CardTitle>Test Results Distribution</CardTitle>
+                    <CardTitle>A / B Test Results Distribution</CardTitle>
                     <CardDescription>Live view of feature flag evaluations</CardDescription>
                   </div>
                   <div className="flex items-center space-x-4 w-full sm:w-auto">
@@ -441,7 +467,9 @@ function App() {
               <CardContent className="h-[300px] md:h-[400px]">
                 <TestResultsChart
                   trueCount={trueCount}
+                  trueErrorCount={trueErrors}
                   falseCount={falseCount}
+                  falseErrorCount={falseErrors}
                 />
               </CardContent>
             </Card>
@@ -459,6 +487,34 @@ function App() {
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {errors} total errors
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">False (A) Error Rate</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-destructive">
+                    {falseCount === 0 ? '0.0%' : 
+                      ((falseErrors / (falseCount)) * 100).toFixed(1) + '%'}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {falseErrors} total false (a) errors
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">True (B) Error Rate</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-destructive">
+                    {trueCount === 0 ? '0.0%' : 
+                      ((trueErrors / (trueCount)) * 100).toFixed(1) + '%'}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {trueErrors} total true (b) errors
                   </p>
                 </CardContent>
               </Card>
@@ -506,7 +562,7 @@ function App() {
         </div>
 
  
-        <Toaster 
+        <Toaster  richColors
           position="bottom-right" 
           className="bottom-4 right-4 md:bottom-6 md:right-6"
         />
